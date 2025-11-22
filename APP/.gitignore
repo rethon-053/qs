@@ -1,0 +1,16 @@
+out
+*.iml
+.idea
+# 忽略编译生成的文件
+target/
+
+# 忽略IDE配置和缓存文件
+.settings/
+.project
+.classpath
+
+# 忽略本地配置文件
+*.properties
+
+# 忽略日志文件
+logs/
