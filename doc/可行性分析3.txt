@@ -1,0 +1,51 @@
+可行性分析:
+		1. 技术
+			集合 网络编程 io  swing
+			
+				界面部分: 
+					swing
+				数据持久化:
+					文件流
+				其他技术:
+				      网络编程
+		
+		2. 功能列举
+			1. 用户注册/登录系统
+                        - 用户名密码验证（核心）
+                        - 重复登录检测（拓）
+   
+                        2. 基础聊天功能
+                           - 聊天（核心）
+                         - 实时消息显示
+                         - 用户列表（核心）
+   
+                       3. 简单数据持久化（核心）
+                        - 用户账号存储
+                        - 聊天记录保存
+			
+                      5. 好友管理（拓）
+                      - 添加/删除好友
+                     - 好友列表维护
+                
+                      6   消息历史查询（拓）
+
+		      7.根据标签推荐好友（拓）
+			
+		
+		3. 数据对象
+			public class User implements Serializabl{
+                           private List<String> tags;               // 兴趣标签列表（新增）
+                           private String username;        // 用户名
+                           private String password;        // 密码
+                           private Date registerTime;      // 注册时间
+                           private List<String> friends;   // 好友列表
+                         
+}
+                          public class Message implements Serializable {
+                                 private String messageId;       // 消息id
+                                 private String sendername;        // 发送者名
+                                 private String receivername;      // 接收者名
+                                 private String content;         // 消息内容
+                                 private Date sendTime;          // 发送时间
+                                  
+}
