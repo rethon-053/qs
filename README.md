@@ -1,37 +1,35 @@
 # qs 
 
 #### 介绍
+
 烈焰升腾小组第二次项目
 
-#### 软件架构
-软件架构说明
+1. ##  目录结构说明
 
+   - doc -- 项目开发相关文档（如：项目需求文档、设计文档等等）
+   - arch -- 项目架构文件
+   - dev -- 项目开发文件
+   - master -- 默认分支
 
-#### 安装教程
+   ## 软件架构
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+   用到了JavaSE面向对象、集合、线程、文件流、Swing图形界面等技术
 
-#### 使用说明
+   ## 环境搭建
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+   ### 开发工具
 
-#### 参与贡献
+   | 工具 | 说明    | 版本   | 备注                                                         |      |      |
+   | ---- | ------- | ------ | ------------------------------------------------------------ | ---- | ---- |
+   | IDEA | 开发IDE | 2024.1 | [https://www.jetbrains.com/idea/download](https://gitee.com/link?target=https%3A%2F%2Fwww.jetbrains.com%2Fidea%2Fdownload) |      |      |
 
-1.  Fork 本仓库
-2.  新建 Feat_xxx 分支
-3.  提交代码
-4.  新建 Pull Request
+   ### 开发环境
 
+   | 工具    | 版本 | 备注                                                         |      |      |      |
+   | ------- | ---- | ------------------------------------------------------------ | ---- | ---- | ---- |
+   | Windows | 10   | 操作系统                                                     |      |      |      |
+   | JDK     | 1.17 | [https://www.injdk.cn/](https://gitee.com/link?target=https%3A%2F%2Fwww.injdk.cn%2F) |      |      |      |
 
-#### 特技
+   ### 安装教程
 
-1.  使用 Readme\_XXX.md 来支持不同的语言，例如 Readme\_en.md, Readme\_zh.md
-2.  Gitee 官方博客 [blog.gitee.com](https://blog.gitee.com)
-3.  你可以 [https://gitee.com/explore](https://gitee.com/explore) 这个地址来了解 Gitee 上的优秀开源项目
-4.  [GVP](https://gitee.com/gvp) 全称是 Gitee 最有价值开源项目，是综合评定出的优秀开源项目
-5.  Gitee 官方提供的使用手册 [https://gitee.com/help](https://gitee.com/help)
-6.  Gitee 封面人物是一档用来展示 Gitee 会员风采的栏目 [https://gitee.com/gitee-stars/](https://gitee.com/gitee-stars/)
+   后续补充
