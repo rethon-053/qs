@@ -1,23 +1,52 @@
 package com.chdz.model;
 
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 //用户类
-public class User {
+public class User implements Serializable {
+    private static final long serialVersionUID = 1L;
+    private List<FriendInfo> friends;
     //用户名(昵称)
     private String name;
     //账号
     private String account;
     //密码
     private String password;
+    //邮箱
+    private String email;
+
+
+    public User(String name, String account, String password, String email) {
+        this.name = name;
+        this.account = account;
+        this.password = password;
+        this.email = email;
+        friends = new ArrayList<>();
+    }
 
     public User() {
     }
 
-    public User(String name, String account, String password) {
-        this.name = name;
-        this.account = account;
-        this.password = password;
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+        this.email = email;
+    }
+    public List<FriendInfo> getFriends() {
+        return friends;
+    }
+
+    public void setFriends(List<FriendInfo> friends) {
+        this.friends = friends;
+    }
+    public void addFriend(FriendInfo friend) {
+        friends.add(friend);
     }
 
     public String getName() {
@@ -48,11 +77,14 @@ public class User {
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
         User user = (User) o;
-        return Objects.equals(name, user.name) && Objects.equals(account, user.account) && Objects.equals(password, user.password);
+        //账户作为唯一标识码
+        return Objects.equals(account, user.account);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, account, password);
+        return Objects.hash(account);
     }
+
+
 }

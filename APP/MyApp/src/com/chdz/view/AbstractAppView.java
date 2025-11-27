@@ -2,7 +2,7 @@ package com.chdz.view;
 
 import com.chdz.global.AppRunTimeData;
 import com.chdz.global.Const;
-import org.w3c.dom.views.AbstractView;
+import com.chdz.network.ClientSocket;
 
 import javax.swing.*;
 import java.awt.*;
@@ -33,6 +33,13 @@ public abstract class AbstractAppView extends JPanel {
                 int choose = JOptionPane.showConfirmDialog(frame, "是否退出应用？", "提示", JOptionPane.YES_NO_OPTION);
                 if (choose == JOptionPane.YES_OPTION) {
                     frame.dispose();
+                    if (AppRunTimeData.getInstance().getClientSocket().isLogin()) {
+                        try {
+                            AppRunTimeData.getInstance().getClientSocket().logout();
+                        } catch (Exception ex) {
+                            ex.printStackTrace();
+                        }
+                    }
                     System.out.println("程序已退出");
                     System.exit(0);
                 }
@@ -49,7 +56,6 @@ public abstract class AbstractAppView extends JPanel {
     protected AbstractAppView() {
         // 设置内容面板的首选大小（不包含窗口装饰）
         setPreferredSize(new Dimension(Const.WIDTH, Const.HEIGHT));
-
     }
 
     //必须重写初始化方法
@@ -88,12 +94,23 @@ public abstract class AbstractAppView extends JPanel {
         return status;
     }
 
+    // 新增：初始化标志，防止重复 init
+    private boolean initialized = false;
+
     /**
-     * 进入视图，默认调用init函数
+     * 进入视图，默认调用init函数（但只第一次调用）
      */
     public void onEnter() {
-        // 初始化
-        init();
+        // 只在首次进入时初始化一次
+        if (!initialized) {
+            try {
+                init();
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+            }
+            initialized = true;
+        }
         // 设置窗口容器面板为当前页面
         frame.setContentPane(this);
         // 自动调整窗口大小以适合内容
@@ -103,7 +120,6 @@ public abstract class AbstractAppView extends JPanel {
         // 下一帧进入更新状态
         status = ViewStatus.ON_UPDATE;
     }
-
 
     /**
      * 更新视图，默认调用draw和handleInput
@@ -129,4 +145,3 @@ public abstract class AbstractAppView extends JPanel {
         }
     }
 }
-

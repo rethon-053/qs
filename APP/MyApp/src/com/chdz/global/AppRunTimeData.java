@@ -1,5 +1,7 @@
 package com.chdz.global;
 
+import com.chdz.model.User;
+import com.chdz.network.ClientSocket;
 import com.chdz.view.AbstractAppView;
 import org.w3c.dom.views.AbstractView;
 
@@ -9,6 +11,9 @@ public class AppRunTimeData {
      */
     private static final AppRunTimeData INSTANCE = new AppRunTimeData();
 
+    private ClientSocket clientSocket;
+
+    private User currentUser;
     /**
      * 当前游戏视图
      */
@@ -30,6 +35,7 @@ public class AppRunTimeData {
     private AppRunTimeData() {
         isExit = false;
     }
+
 
     /**
      * 获取单例对象
@@ -53,5 +59,19 @@ public class AppRunTimeData {
      */
     public AbstractAppView getCurrView() {
         return currView;
+    }
+
+    public ClientSocket getClientSocket() {
+        return clientSocket;
+    }
+    public void setClientSocket(ClientSocket clientSocket) {
+        this.clientSocket = clientSocket;
+    }
+
+    public void setCurrentUser(User user) {
+        this.currentUser = user;
+    }
+    public User getCurrentUser() {
+        return currentUser;
     }
 }

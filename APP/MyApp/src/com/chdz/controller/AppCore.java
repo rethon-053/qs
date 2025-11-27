@@ -1,8 +1,11 @@
 package com.chdz.controller;
 
 import com.chdz.global.AppRunTimeData;
+import com.chdz.network.ClientSocket;
+import com.chdz.network.MessageHandler;
 import com.chdz.view.AbstractAppView;
 import com.chdz.view.LoginFrame;
+import com.chdz.view.RegisterFrame;
 import org.w3c.dom.views.AbstractView;
 
 import java.util.concurrent.ScheduledExecutorService;
@@ -92,6 +95,16 @@ public class AppCore {
         // 设置APP
         setup();
 
+        ClientSocket cs = new ClientSocket();
+//        cs.connect("uei3wlmhh6.localto.net", 80);
+        cs.connect("localhost", 8888);
+        if (!cs.isConnected()) {
+            //连接失败直接结束程序
+            System.err.println("连接服务器失败");
+            return;
+        }
+
+        AppRunTimeData.getInstance().setClientSocket(cs);
         // 设置第一个视图
         AppRunTimeData.getInstance().changeView(new LoginFrame());
 
