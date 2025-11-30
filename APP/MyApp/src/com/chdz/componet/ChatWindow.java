@@ -1,6 +1,8 @@
 package com.chdz.componet;
+import com.chdz.Util.AvatarUtil;
 import com.chdz.global.AppRunTimeData;
 import com.chdz.model.ChatMessage;
+import com.chdz.model.FriendInfo;
 import com.chdz.model.READ_STATUS_UPDATE;
 import com.chdz.network.ClientSocket;
 
@@ -8,6 +10,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.IOException;
 import java.lang.reflect.Array;
 import java.text.SimpleDateFormat;
@@ -22,7 +26,8 @@ public class ChatWindow extends JFrame {
     private ClientSocket clientSocket;
     private String currentUserAccount = AppRunTimeData.getInstance().getCurrentUser().getAccount();
 
-    private JTextArea chatArea;
+    private JPanel chatPanel;
+    private JScrollPane scrollPane;
     private JTextField inputField;
     private JButton sendButton;
 
@@ -33,13 +38,12 @@ public class ChatWindow extends JFrame {
         init();
         ArrayList<ChatMessage> chatMessages = clientSocket.getChatMessagesMap().getOrDefault(friendId, new ArrayList<>());
         for (ChatMessage chat : chatMessages) {
-            System.out.println(chat.getTime() + " " + chat.getContent());
-            appendMessage(chat.getFrom(), chat.getContent());
+            appendMessage(chat.getTime(), friendId.equals(chat.getFrom()) ?  friendId : "我", chat.getContent());
         }
         if (!chatMessages.isEmpty()) {
-            clientSocket.getReadStatusUpdateMap().put(friendId + "_" + currentUserAccount, new READ_STATUS_UPDATE(friendId, currentUserAccount, chatMessages.getLast().getTime()));
+            clientSocket.getReadStatusUpdateMap().put(friendId + "_" + currentUserAccount, new READ_STATUS_UPDATE(friendId, currentUserAccount, chatMessages.get(chatMessages.size() - 1).getTime()));
             try {
-                clientSocket.sendRSU(new READ_STATUS_UPDATE(friendId, currentUserAccount, chatMessages.getLast().getTime()));
+                clientSocket.sendRSU(new READ_STATUS_UPDATE(friendId, currentUserAccount, chatMessages.get(chatMessages.size() - 1).getTime()));
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -57,13 +61,14 @@ public class ChatWindow extends JFrame {
         JPanel mainPanel = new JPanel(new BorderLayout());
 
         // 创建聊天内容区域
-        chatArea = new JTextArea();
-        chatArea.setEditable(false);
-        chatArea.setLineWrap(true);
-        chatArea.setWrapStyleWord(true);
+        chatPanel = new JPanel();
+        chatPanel.setLayout(new BoxLayout(chatPanel, BoxLayout.Y_AXIS));
+        chatPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+
 
         // 添加滚动面板
-        JScrollPane scrollPane = new JScrollPane(chatArea);
+        scrollPane = new JScrollPane(chatPanel);
         mainPanel.add(scrollPane, BorderLayout.CENTER);
 
         // 创建底部输入区域
@@ -103,8 +108,28 @@ public class ChatWindow extends JFrame {
 
         setContentPane(mainPanel);
 
-        // 显示欢迎消息
-        appendMessage("系统消息", "开始与 " + friendName + " 的对话");
+
+        this.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+
+                SwingUtilities.invokeLater(() -> {
+                    try {
+                        clientSocket.getReadStatusUpdateMap().put(friendId + "_" + currentUserAccount, new READ_STATUS_UPDATE(friendId, currentUserAccount, System.currentTimeMillis()));
+                        clientSocket.sendRSU(new READ_STATUS_UPDATE(friendId, currentUserAccount, System.currentTimeMillis()));
+
+                        if (clientSocket.getMessagePanel() != null) {
+                            clientSocket.getMessagePanel().loadConversations();
+                            clientSocket.getMessagePanel().revalidate();
+                            clientSocket.getMessagePanel().repaint();
+                        }
+                    } catch (IOException ex) {
+                        throw new RuntimeException(ex);
+                    }
+                    dispose();
+                });
+            }
+        });
     }
 
     // 发送消息
@@ -112,7 +137,7 @@ public class ChatWindow extends JFrame {
         String message = inputField.getText().trim();
         if (!message.isEmpty()) {
             // 显示自己发送的消息
-            appendMessage("我", message);
+            appendMessage(System.currentTimeMillis(),"我", message);
             ChatMessage chatMessage = new ChatMessage(AppRunTimeData.getInstance().getCurrentUser().getAccount(), friendId, message);
             clientSocket.getChatMessagesMap().getOrDefault(friendId,new ArrayList<>()).add(chatMessage);
             clientSocket.sendRSU(new READ_STATUS_UPDATE(friendId, currentUserAccount, chatMessage.getTime()));
@@ -129,14 +154,64 @@ public class ChatWindow extends JFrame {
 
 
     // 追加消息到聊天区域
-    public void appendMessage(String sender, String message) {
-        SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
-        String time = sdf.format(new Date());
+    public void appendMessage(long time,String sender, String message) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        String timeStr = sdf.format(new Date(time));
 
-        String formattedMessage = "[" + time + "] " + sender + ": " + message + "\n";
-        chatArea.append(formattedMessage);
+        JPanel messageItem = new JPanel();
 
-        // 自动滚动到底部
-        chatArea.setCaretPosition(chatArea.getDocument().getLength());
+        byte[] avatarData = null;
+        if (!sender.equals("我")) {
+            avatarData = AppRunTimeData.getInstance().getCurrentUser().getFriends().get(sender).getAvatar();
+        }
+        byte[] myAvatarData = AppRunTimeData.getInstance().getCurrentUser().getAvatar();
+
+        if (sender.equals("我")){
+            messageItem.setLayout(new FlowLayout(FlowLayout.RIGHT));
+
+            JPanel contentPanel = new JPanel();
+            contentPanel.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
+            contentPanel.setBackground(new Color(100, 180, 255));
+
+            JLabel contentLabel = new JLabel(message);
+            contentLabel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+            contentPanel.add(contentLabel);
+            contentPanel.setForeground(Color.WHITE);
+            JLabel avatarLabel = AvatarUtil.createAvatarLabel(myAvatarData, AvatarUtil.CHAT_AVATAR_SIZE);
+
+            messageItem.add(contentPanel);
+            messageItem.add(avatarLabel);
+        } else {
+            messageItem.setLayout(new FlowLayout(FlowLayout.LEFT));
+
+            JLabel avatarLabel = AvatarUtil.createAvatarLabel(avatarData, AvatarUtil.CHAT_AVATAR_SIZE);
+
+            JPanel contentPanel = new JPanel();
+            contentPanel.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
+            contentPanel.setBackground(new Color(227, 230, 235));
+
+            JLabel contentLabel = new JLabel(message);
+            contentLabel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+            contentPanel.add(contentLabel);
+            contentPanel.setForeground(new Color(15, 15, 15));
+
+            messageItem.add(avatarLabel);
+            messageItem.add(contentPanel);
+        }
+        JLabel timeLabel = new JLabel(timeStr);
+        timeLabel.setFont(new Font("微软雅黑", Font.PLAIN, 10));
+        timeLabel.setForeground(Color.GRAY);
+        timeLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        chatPanel.add(timeLabel);
+        chatPanel.add(messageItem);
+        chatPanel.add(Box.createVerticalStrut(10));
+
+        this.revalidate();
+        this.repaint();
+        SwingUtilities.invokeLater(()-> {
+            JScrollBar verticalScrollBar = scrollPane.getVerticalScrollBar();
+            verticalScrollBar.setValue(verticalScrollBar.getMaximum());
+        });
     }
 }

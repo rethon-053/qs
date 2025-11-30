@@ -2,6 +2,8 @@ package com.chdz.network;
 
 import com.chdz.componet.ChatWindow;
 import com.chdz.componet.MessagePanel;
+import com.chdz.componet.TrackPanel;
+import com.chdz.componet.UserListerPanel;
 import com.chdz.global.AppRunTimeData;
 import com.chdz.model.*;
 import com.chdz.view.AbstractAppView;
@@ -11,6 +13,7 @@ import com.chdz.view.LoginFrame;
 import javax.swing.*;
 import java.io.*;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.util.*;
 
 public class ClientSocket {
@@ -24,6 +27,10 @@ public class ClientSocket {
     private Map<String, ArrayList<ChatMessage>> chatMessagesMap;
     private HashSet<AddFriendRequest> addFriendRequests = new HashSet<>();
     private Map<String, READ_STATUS_UPDATE> readStatusUpdateMap;
+    private TrackPanel trackPanel;
+    private UserListerPanel userListerPanel;
+    private ArrayList<Post> rcvPosts = new ArrayList<>();
+    private ArrayList<Post> sendPosts = new ArrayList<>();
 
 
 
@@ -73,7 +80,6 @@ public class ClientSocket {
             oos.flush();
         } catch (IOException e) {
             notifyError("发送消息失败: " + e.getMessage());
-            disconnect();
         }
     }
     
@@ -86,13 +92,19 @@ public class ClientSocket {
 
                 while (isConnected) {
                     Object obj = ois.readObject();
-                    System.out.println("Received message: " + obj);
                     if (obj instanceof User user){
                         AppRunTimeData.getInstance().setCurrentUser(user);
+                        File file = new File(getClass().getResource("/src/res/info.l").getFile());
+                        try (FileOutputStream fos = new FileOutputStream(file)) {
+                            ObjectOutputStream oos = new ObjectOutputStream(fos);
+                            oos.writeObject(user);
+                        }
                         continue;
                     }
+                    if (obj instanceof FriendInfo f){
+                        AppRunTimeData.getInstance().getCurrentUser().getFriends().put(f.getId(),f);
+                    }
                     if (obj instanceof Map<?, ?>) {
-                        System.out.println("chatMessagesMap: " + obj);
                         Map<?, ?> map = (Map<?, ?>) obj;
                         if (map.containsKey("chat")) {
                             chatMessagesMap = (Map<String, ArrayList<ChatMessage>>) map.get("chat");
@@ -103,20 +115,29 @@ public class ClientSocket {
                             readStatusUpdateMap = (Map<String, READ_STATUS_UPDATE>) map.get("read");
                             if (readStatusUpdateMap == null) {
                                 readStatusUpdateMap = new HashMap<>();
-                                SwingUtilities.invokeLater(() -> {
-                                    if (messagePanel != null) {
-                                        messagePanel.loadConversations();
-                                    }
-                                });
+
+                            }
+                        } else if (map.containsKey("rcvPosts")){
+                            rcvPosts = (ArrayList<Post>) map.get("rcvPosts");
+                            if (rcvPosts == null) {
+                                rcvPosts = new ArrayList<>();
+                            }
+                        } else if (map.containsKey("sendPosts")){
+                            sendPosts = (ArrayList<Post>) map.get("sendPosts");
+                            if (sendPosts == null) {
+                                sendPosts = new ArrayList<>();
                             }
                         }
                     }
-                    if (obj instanceof ArrayList<?>) {
-                        ArrayList<?> list = (ArrayList<?>) obj;
-                        if (list.isEmpty()) {
-                            continue;
+                    if (obj instanceof Post post) {
+                        rcvPosts.add(post);
+                        if (trackPanel != null) {
+                           SwingUtilities.invokeLater(() -> {
+                               trackPanel.updatePostList(rcvPosts);
+                           }) ;
                         }
                     }
+
                     if (obj instanceof HashSet<?>) {
                         addFriendRequests = (HashSet<AddFriendRequest>) obj;
                         if (chatMainFrame != null) {
@@ -126,9 +147,17 @@ public class ClientSocket {
                     if (obj instanceof AddFriendRequest addFriendRequest){
                         System.out.println("addFriendRequest: " + addFriendRequest.getRequestId());
                         // 处理添加好友请求
-                        addFriendRequests.add(addFriendRequest);
-                        chatMainFrame.updateAddFriendRequests();
 
+                        addFriendRequests.add(addFriendRequest);
+                        SwingUtilities.invokeLater(()->{
+                            try {
+                                chatMainFrame.updateAddFriendRequests();
+                                userListerPanel.revalidate();
+                                userListerPanel.repaint();
+                            } catch (IOException e) {
+                                throw new RuntimeException(e);
+                            }
+                        });
                     }
                     if (obj instanceof String s) {
                         System.out.println("text: " + s);
@@ -178,7 +207,15 @@ public class ClientSocket {
                         if (chatMainFrame != null) {
                             // 通过friendId查找或创建聊天窗口
                             String friendName = from; // 如果有好友名称映射，可以使用实际名称
-                            
+                            SwingUtilities.invokeLater(() -> {
+                                                                // 获取打开的聊天窗口并追加消息
+                                Map<String, ChatWindow> chatWindows = getChatWindowsFromMainFrame();
+                                if (chatWindows != null && chatWindows.containsKey(from)) {
+                                    ChatWindow chatWindow = chatWindows.get(from);
+                                    chatWindow.appendMessage(chat.getTime(),from, content);
+                                }
+                            });
+
                             SwingUtilities.invokeLater(() -> {
                                 // 更新消息面板
                                 if (messagePanel != null) {
@@ -193,6 +230,9 @@ public class ClientSocket {
                 }
             } catch (IOException e) {
                 if (isConnected) { // 只在连接状态下报告错误
+                    if (e.getMessage() == null) {
+                        return;
+                    }
                     notifyError("接收消息错误: " + e.getMessage());
                 }
             } catch (ClassNotFoundException e) {
@@ -205,11 +245,21 @@ public class ClientSocket {
                         notifyError("刷新输入流失败: " + e.getMessage());
                     }
                 }
-                disconnect();
             }
         }).start();
     }
-    
+
+    private Map<String, ChatWindow> getChatWindowsFromMainFrame() {
+        try {
+            // 使用反射获取ChatMainFrame中的chatWindows字段
+            java.lang.reflect.Field field = ChatMainFrame.class.getDeclaredField("chatWindows");
+            field.setAccessible(true);
+            return (Map<String, ChatWindow>) field.get(chatMainFrame);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
 
     // 登录界面调用此方法
     public void sendLogin(String account, String password) throws IOException {
@@ -237,8 +287,18 @@ public class ClientSocket {
     // 断开连接
     public void disconnect() {
         if (!isConnected) return;
-        
         isConnected = false;
+        try {
+            logout();
+        } catch (IOException e) {
+           e.printStackTrace();
+        }
+        try {
+            Thread.sleep(1000); // 等待1000毫秒，确保消息发送完成
+        } catch (InterruptedException e) {
+
+        }
+
         try {
             if (socket != null) socket.close();
             if (outputStream != null) outputStream.close();
@@ -260,7 +320,7 @@ public class ClientSocket {
         try {
             sendMessage(new LogoutMessage(AppRunTimeData.getInstance().getCurrentUser().getAccount()));
         } catch (IOException e) {
-            throw new IOException("注销失败: " + e.getMessage(), e);
+
         }
     }
     public Map<String, ArrayList<ChatMessage>> getChatMessagesMap() {
@@ -268,18 +328,30 @@ public class ClientSocket {
     }
 
     public void sendAddFriendRequest(String friendId) throws IOException {
-        AddFriendRequest addFriendRequest = new AddFriendRequest(friendId, AppRunTimeData.getInstance().getCurrentUser().getAccount(),AppRunTimeData.getInstance().getCurrentUser().getName(),0);
+        AddFriendRequest addFriendRequest = new AddFriendRequest(friendId,
+                AppRunTimeData.getInstance().getCurrentUser().getAccount(),
+                AppRunTimeData.getInstance().getCurrentUser().getName(),0,sendPosts,
+                AppRunTimeData.getInstance().getCurrentUser().getAvatar()
+        );
         sendMessage(addFriendRequest);
     }
     public HashSet<AddFriendRequest> getAddFriendRequests() {
         return addFriendRequests;
     }
     public void acceptFriendRequest(String friendId) throws IOException {
-        AddFriendRequest addFriendRequest = new AddFriendRequest(friendId, AppRunTimeData.getInstance().getCurrentUser().getAccount(),AppRunTimeData.getInstance().getCurrentUser().getName(),1);
+        AddFriendRequest addFriendRequest = new AddFriendRequest(friendId,
+                AppRunTimeData.getInstance().getCurrentUser().getAccount(),
+                AppRunTimeData.getInstance().getCurrentUser().getName(),1,sendPosts,
+                AppRunTimeData.getInstance().getCurrentUser().getAvatar()
+        );
         sendMessage(addFriendRequest);
     }
     public void rejectFriendRequest(String friendId) throws IOException {
-        AddFriendRequest addFriendRequest = new AddFriendRequest(friendId, AppRunTimeData.getInstance().getCurrentUser().getAccount(),AppRunTimeData.getInstance().getCurrentUser().getName(),2);
+        AddFriendRequest addFriendRequest = new AddFriendRequest(friendId,
+                AppRunTimeData.getInstance().getCurrentUser().getAccount(),
+                AppRunTimeData.getInstance().getCurrentUser().getName(),2,null,
+                AppRunTimeData.getInstance().getCurrentUser().getAvatar()
+        );
         sendMessage(addFriendRequest);
     }
     public void updateUser() throws IOException {
@@ -287,6 +359,7 @@ public class ClientSocket {
     }
     public void sendCompleteRequest(AddFriendRequest addFriendRequest) throws IOException {
         addFriendRequest.setStatus(3);
+        addFriendRequest.setPosts(sendPosts);
         sendMessage(addFriendRequest);
     }
 
@@ -295,10 +368,39 @@ public class ClientSocket {
     }
     public void sendRSU(READ_STATUS_UPDATE rsu) throws IOException {
         sendMessage(rsu);
-        messagePanel.loadConversations();
     }
     public Map<String, READ_STATUS_UPDATE> getReadStatusUpdateMap() {
         return readStatusUpdateMap;
     }
+    public MessagePanel getMessagePanel() {
+        return messagePanel;
+    }
 
+    public void sendPost(Post post) throws IOException {
+        sendPosts.add(post);
+        sendMessage(post);
+    }
+
+    public void setTrackPanel(TrackPanel trackPanel) {
+        this.trackPanel = trackPanel;
+    }
+    public ArrayList<Post> getRcvPosts() {
+        return rcvPosts;
+    }
+    public ArrayList<Post> getSendPosts() {
+        return sendPosts;
+    }
+
+    public void sendUpdateUserInfo(User u) throws IOException {
+        HashMap<String,User> updateUser = new HashMap<>();
+        updateUser.put("updateInfo", u);
+        sendMessage(updateUser);
+    }
+    public TrackPanel getTrackPanel() {
+        return trackPanel;
+    }
+
+    public void setUserListerPanel(UserListerPanel userListerPanel) {
+        this.userListerPanel = userListerPanel;
+    }
 }

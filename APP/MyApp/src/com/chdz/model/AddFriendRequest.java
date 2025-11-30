@@ -1,6 +1,7 @@
 package com.chdz.model;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Objects;
 
 public class AddFriendRequest implements Serializable {
@@ -9,11 +10,18 @@ public class AddFriendRequest implements Serializable {
     private String requestId;
     private String myName;
     private int status;//用于判断是发送申请还是同意申请
-    public AddFriendRequest(String friendId, String requestId,String myName, int status) {
+    private ArrayList<Post> posts;
+    private byte[] avatarData;
+    public AddFriendRequest(String friendId, String requestId,String myName, int status, ArrayList<Post> posts,byte[] avatarData) {
         this.friendId = friendId;
         this.requestId = requestId;
         this.myName = myName;
         this.status = status;
+        this.posts = posts;
+        this.avatarData = avatarData;
+    }
+    public byte[] getAvatarData() {
+        return avatarData;
     }
     public String getFriendId() {
         return friendId;
@@ -42,5 +50,11 @@ public class AddFriendRequest implements Serializable {
     @Override
     public int hashCode() {
         return Objects.hash(friendId, requestId, myName);
+    }
+     public ArrayList<Post> getPosts() {
+        return posts;
+    }
+    public void setPosts(ArrayList<Post> posts) {
+        this.posts = posts;
     }
 }

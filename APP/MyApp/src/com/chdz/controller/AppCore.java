@@ -2,12 +2,8 @@ package com.chdz.controller;
 
 import com.chdz.global.AppRunTimeData;
 import com.chdz.network.ClientSocket;
-import com.chdz.network.MessageHandler;
 import com.chdz.view.AbstractAppView;
 import com.chdz.view.LoginFrame;
-import com.chdz.view.RegisterFrame;
-import org.w3c.dom.views.AbstractView;
-
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;

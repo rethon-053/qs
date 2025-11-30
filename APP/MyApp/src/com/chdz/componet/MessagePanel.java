@@ -2,17 +2,15 @@ package com.chdz.componet;
 
 import com.chdz.global.AppRunTimeData;
 import com.chdz.model.ChatMessage;
-import com.chdz.model.READ_STATUS_UPDATE;
+import com.chdz.model.FriendInfo;
 import com.chdz.network.ClientSocket;
 import com.chdz.view.ChatMainFrame;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -23,7 +21,6 @@ public class MessagePanel extends JPanel {
     private ClientSocket clientSocket;
     private JList<String> conversationList;
     private DefaultListModel<String> conversationModel;
-    private JButton addFriend;
 
 
     private List<Conversation> conversations = new ArrayList<>();
@@ -72,11 +69,12 @@ public class MessagePanel extends JPanel {
         }
         for (Map.Entry<String, ArrayList<ChatMessage>> entry : clientSocket.getChatMessagesMap().entrySet()) {
             String friendId = entry.getKey();
-            System.out.println(1);
             ArrayList<ChatMessage> chatMessages = entry.getValue();
             if (!chatMessages.isEmpty()) {
-                ChatMessage lastMessage = chatMessages.getLast();
-                conversations.add(new Conversation(lastMessage.getFrom(), friendId, lastMessage.getContent(), getUnreadCount(chatMessages, friendId), lastMessage.getTime()));
+                ChatMessage lastMessage = chatMessages.get(chatMessages.size() - 1);
+                System.out.println(AppRunTimeData.getInstance().getCurrentUser().getFriends().keySet());
+                FriendInfo friend = AppRunTimeData.getInstance().getCurrentUser().getFriends().get(friendId);
+                conversations.add(new Conversation(friend.getName(), friendId, lastMessage.getContent(), getUnreadCount(chatMessages, friendId)));
             }
         }
         updateConversationList();
@@ -101,14 +99,12 @@ public class MessagePanel extends JPanel {
         private String friendId;
         private String lastMessage;
         private int unreadCount;
-        private long lastMessageTime;
 
-        public Conversation(String friendName, String friendId, String lastMessage, int unreadCount, long lastMessageTime) {
+        public Conversation(String friendName, String friendId, String lastMessage, int unreadCount) {
             this.friendName = friendName;
             this.friendId = friendId;
             this.lastMessage = lastMessage;
             this.unreadCount = unreadCount;
-            this.lastMessageTime = lastMessageTime;
         }
 
         // Getters
@@ -139,12 +135,10 @@ public class MessagePanel extends JPanel {
     private int getUnreadCount(ArrayList<ChatMessage> chatMessages, String friendId) {
         int l = 0, r = chatMessages.size() - 1;
         if (clientSocket.getReadStatusUpdate(friendId) == null){
-            System.out.println("NO");
             return chatMessages.size();
         }
         long sendTime = clientSocket.getReadStatusUpdate(friendId).getSendTime();
         while (l <= r) {
-
             int mid = (l + r) >> 1;
             if ( chatMessages.get(mid).getFrom().equals(AppRunTimeData.getInstance().getCurrentUser().getAccount())|| chatMessages.get(mid).getTime() <= sendTime) {
                 l = mid + 1;
@@ -154,6 +148,5 @@ public class MessagePanel extends JPanel {
         }
         return chatMessages.size() - l;
     }
-
 }
 

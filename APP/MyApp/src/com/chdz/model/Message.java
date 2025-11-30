@@ -14,12 +14,10 @@ public class Message implements Serializable {
         this.senderId = senderId;
         this.timestamp = System.currentTimeMillis();
     }
-    
-    // Getters and setters
-    public String getSenderId() { return senderId; }
-    public void setSenderId(String senderId) { this.senderId = senderId; }
-    public long getTimestamp() { return timestamp; }
-    
+
+    public String getSenderId() {
+        return senderId;
+    }
     @Override
     public String toString() {
         return "Message{senderId='" + senderId + "'}";

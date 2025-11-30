@@ -1,8 +1,10 @@
 package com.chdz.view;
 
+import com.chdz.Util.AvatarUtil;
 import com.chdz.controller.LoginController;
 import com.chdz.global.AppRunTimeData;
 import com.chdz.global.Const;
+import com.chdz.model.User;
 import com.chdz.network.ClientSocket;
 
 import javax.imageio.ImageIO;
@@ -11,8 +13,7 @@ import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.*;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 
 //登录界面
 public class LoginFrame extends AbstractAppView {
@@ -21,8 +22,8 @@ public class LoginFrame extends AbstractAppView {
     private JPasswordField passwordField;
     private JButton registerButton;
     private JButton loginButton;
-    private String loginBtnPath = "APP/res/images/登录按钮.png";
-    private String registerBtnPath = "APP/res/images/注册按钮.png";
+    private String loginBtnPath = "/images/登录按钮.png";
+    private String registerBtnPath = "/images/注册按钮.png";
 
     private String account;
     private String password;
@@ -91,6 +92,18 @@ public class LoginFrame extends AbstractAppView {
         registerButton.setBounds(REGISTER_BUTTON_X, BUTTONS_Y, BUTTON_WIDTH, BUTTON_HEIGHT);
         setupRegisterButton();
         add(registerButton);
+
+        File info = new File(getClass().getResource("/src/res/info.l").getFile());
+        try (FileInputStream fis = new FileInputStream(info);
+             ObjectInputStream ois = new ObjectInputStream(fis)) {
+            User user = (User) ois.readObject();
+            accountField.setText(user.getAccount());
+            passwordField.setText(user.getPassword());
+            passwordField.setEchoChar('*');
+            passwordField.setForeground(Color.BLACK);
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
     }
 
     private void setupAccountField() {
@@ -167,13 +180,13 @@ public class LoginFrame extends AbstractAppView {
 
             @Override
             public void mouseEntered(MouseEvent e) {
-                loginBtnPath = "APP/res/images/登录按下.png";
+                loginBtnPath = "/images/登录按下.png";
                 repaint();
             }
 
             @Override
             public void mouseExited(MouseEvent e) {
-                loginBtnPath = "APP/res/images/登录按钮.png";
+                loginBtnPath = "/images/登录按钮.png";
                 repaint();
             }
         });
@@ -193,13 +206,13 @@ public class LoginFrame extends AbstractAppView {
 
             @Override
             public void mouseEntered(MouseEvent e) {
-                registerBtnPath = "APP/res/images/注册按下.png";
+                registerBtnPath = "/images/注册按下.png";
                 repaint();
             }
 
             @Override
             public void mouseExited(MouseEvent e) {
-                registerBtnPath = "APP/res/images/注册按钮.png";
+                registerBtnPath = "/images/注册按钮.png";
                 repaint();
             }
         });
@@ -261,7 +274,7 @@ public class LoginFrame extends AbstractAppView {
 
     private void drawBackground(Graphics g) {
         try {
-            ImageIcon bgIcon = new ImageIcon("APP/res/images/LoginBg.jpg");
+            ImageIcon bgIcon = new ImageIcon(getClass().getResource("/images/LoginBg.jpg"));
             g.drawImage(bgIcon.getImage(), 0, 0, Const.WIDTH, Const.HEIGHT, this);
         } catch (Exception e) {
             // 如果背景图片加载失败，使用纯色背景
@@ -273,13 +286,13 @@ public class LoginFrame extends AbstractAppView {
     private void drawButtonImages(Graphics g) {
         try {
             // 登录按钮图片 - 使用与按钮组件完全相同的位置和尺寸
-            ImageIcon loginIcon = new ImageIcon(loginBtnPath);
+            ImageIcon loginIcon = new ImageIcon(getClass().getResource(loginBtnPath));
             g.drawImage(loginIcon.getImage(),
                     LOGIN_BUTTON_X, BUTTONS_Y,
                     BUTTON_WIDTH, BUTTON_HEIGHT, this);
 
             // 注册按钮图片 - 使用与按钮组件完全相同的位置和尺寸
-            ImageIcon registerIcon = new ImageIcon(registerBtnPath);
+            ImageIcon registerIcon = new ImageIcon(getClass().getResource(registerBtnPath));
             g.drawImage(registerIcon.getImage(),
                     REGISTER_BUTTON_X, BUTTONS_Y,
                     BUTTON_WIDTH, BUTTON_HEIGHT, this);
@@ -311,25 +324,36 @@ public class LoginFrame extends AbstractAppView {
         Shape circle = new Ellipse2D.Double(125, 60, 130, 130);
 
         try {
-            BufferedImage originalImage = ImageIO.read(new File("APP/res/images/头像1.png"));
-            if (originalImage == null) {
-                drawDefaultAvatar(g2d, circle);
-                return;
+            File f = new File(getClass().getResource("/info.l").getFile());
+            if (f.length() == 0) {
+                g2d.setClip(circle);
+                g2d.drawImage(AvatarUtil.getDefaultAvatar(160).getImage(), 110, 45, null);
             }
+            ObjectInputStream ois = new ObjectInputStream(new FileInputStream(f));
+            User u = (User) ois.readObject();
+            byte[] avatarData = u.getAvatar();
+            ois.close();
+            // 加载用户头像
+            if (avatarData != null) {
+                BufferedImage userAvater = ImageIO.read(new ByteArrayInputStream(avatarData));
+                // 缩放图片
+                BufferedImage scaledImage = new BufferedImage(130, 130, BufferedImage.TYPE_INT_ARGB);
+                Graphics2D scaleG2d = scaledImage.createGraphics();
+                scaleG2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+                scaleG2d.drawImage(userAvater, 0, 0, 130, 130, null);
+                scaleG2d.dispose();
 
-            // 缩放图片
-            BufferedImage scaledImage = new BufferedImage(130, 130, BufferedImage.TYPE_INT_ARGB);
-            Graphics2D scaleG2d = scaledImage.createGraphics();
-            scaleG2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-            scaleG2d.drawImage(originalImage, 0, 0, 130, 130, null);
-            scaleG2d.dispose();
-
-            // 绘制圆形头像
-            g2d.setClip(circle);
-            g2d.drawImage(scaledImage, 125, 60, null);
-
+                // 绘制圆形头像
+                g2d.setClip(circle);
+                g2d.drawImage(scaledImage, 125, 60, null);
+            } else {
+                g2d.setClip(circle);
+                g2d.drawImage(AvatarUtil.getDefaultAvatar(160).getImage(), 110, 45, null);
+            }
         } catch (IOException e) {
             drawDefaultAvatar(g2d, circle);
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
         } finally {
             g2d.setClip(null);
         }

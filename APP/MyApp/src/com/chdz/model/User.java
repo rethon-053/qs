@@ -1,14 +1,12 @@
 package com.chdz.model;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 //用户类
 public class User implements Serializable {
     private static final long serialVersionUID = 1L;
-    private List<FriendInfo> friends;
+    private Map<String,FriendInfo> friends = new HashMap<>();
     //用户名(昵称)
     private String name;
     //账号
@@ -18,13 +16,21 @@ public class User implements Serializable {
     //邮箱
     private String email;
 
+    private byte[] avatar;
 
     public User(String name, String account, String password, String email) {
         this.name = name;
         this.account = account;
         this.password = password;
         this.email = email;
-        friends = new ArrayList<>();
+        friends = new HashMap<>();
+    }
+    public byte[] getAvatar() {
+        return avatar;
+    }
+
+    public void setAvatar(byte[] avatar) {
+        this.avatar = avatar;
     }
 
     public User() {
@@ -38,15 +44,15 @@ public class User implements Serializable {
         this.email = email;
         this.email = email;
     }
-    public List<FriendInfo> getFriends() {
+    public Map<String,FriendInfo> getFriends() {
         return friends;
     }
 
-    public void setFriends(List<FriendInfo> friends) {
+    public void setFriends(Map<String,FriendInfo> friends) {
         this.friends = friends;
     }
     public void addFriend(FriendInfo friend) {
-        friends.add(friend);
+        friends.put(friend.getId(),friend);
     }
 
     public String getName() {
@@ -84,6 +90,10 @@ public class User implements Serializable {
     @Override
     public int hashCode() {
         return Objects.hash(account);
+    }
+
+    public String toString() {
+        return account + " " + name + " " + email + " " + friends.keySet();
     }
 
 
